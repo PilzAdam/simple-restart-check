@@ -7,12 +7,12 @@ A simple Bash script that checks if processes use outdated libraries. This is us
 Simply run `simple-restart-check.sh`. By default, it checks all processes that are currently running. Note that it requires root priviliges to check processes not owned by the user who runs the script.
 
 Command-line options:
-| Option   | Description                                                                                                                       |
-|----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `-p PID` | Only check the process with the given PID. Can be given multiple times, in which case all explicitly given processes are checked. |
-| `-v`     | List all outdated libraries for each process, instead of omitting the list if there is more than 1 outdated library.              |
-| `-f`     | Show full library path instead of just the filename.                                                                              |
-| `-h`     | Print a help message and exit.                                                                                                    |
+| Option                   | Description                                                                                                                       |
+|:------------------------:|-----------------------------------------------------------------------------------------------------------------------------------|
+| <code>-p&nbsp;PID</code> | Only check the process with the given PID. Can be given multiple times, in which case all explicitly given processes are checked. |
+| `-v`                     | List all outdated libraries for each process, instead of omitting the list if there is more than 1 outdated library.              |
+| `-f`                     | Show full library path instead of just the filename.                                                                              |
+| `-h`                     | Print a help message and exit.                                                                                                    |
 
 ## How does it work?
 
