@@ -87,7 +87,14 @@ do
 	progress $((i+1)) ${#pids[@]}
 	pid="${pids[i]}"
 
-	outdated=() # list of all outdated library filenames
+	if [[ ! -d "/proc/$pid" ]]
+	then
+		# process already terminated
+		clearLine
+		continue
+	fi
+
+	outdated=() # list of all outdated libraries we find
 
 	while read -r line
 	do
@@ -125,8 +132,16 @@ do
 
 	if [[ ${#outdated[@]} > 0 ]]
 	then
-		name="$(basename "$(realpath "/proc/$pid/exe")")"
-		name="${name% (deleted)}"
+		if [[ -f "/proc/$pid/exe" ]]
+		then
+			name="$(basename "$(realpath "/proc/$pid/exe")")"
+			name="${name% (deleted)}" # exe itself may be deleted
+		elif [[ -f "/proc/$pid/comm" ]]
+		then
+			name="$(cat "/proc/$pid/comm")"
+		else
+			name="[unknown]"
+		fi
 
 		clearLine
 		echo -en "\033[0;35m$name\033[0m (\033[1m$pid\033[0m) uses "
