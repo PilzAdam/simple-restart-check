@@ -2,19 +2,15 @@
 
 # A utility script that checks if processes use outdated libraries.
 # This is useful to run after an upgrade, to check which processes need to be restarted.
-# The main idea to is to check in /proc/$pid/maps for entries marked as "(deleted)".
+# The main idea to is to check in /proc/$pid/maps for entries marked as executable and "(deleted)".
 # See below for a list of 'ignore patterns', for which we don't care if they are marked as "(deleted)"
 
 IGNORE_PATTERNS=(
-	"/dev/*"         # don't care about device files
-	"/SYSV00000000"  # don't care about SysV shm segments
-	"/run/*"         # don't care about temporary run-time files
+	"/dev/*"         # device files
+	"/run/*"         # temporary run-time files
 	"/var/run/*"
-	"/memfd:*"       # don't care about temporary memory files
-	"/\[aio\]"       # don't care about aio (asynchronous IO) file descriptors
-
+	"/memfd:*"       # temporary memory files, e.g. from a JIT compiler
 	"/tmp/.gl*"      # temporary OpenGL (?) files, e.g. /tmp/.glWSsluM
-	"*/dconf/user"   # dconf file, $HOME/.config/dconf/user
 )
 
 pids=() # PIDs to check
@@ -95,32 +91,37 @@ do
 
 	while read -r line
 	do
-		if [[ "$line" == *" (deleted)" ]]
-		then
-			file="${line% (deleted)}"
+		file="${line% (deleted)}"
 
-			ignore=""
-			for pattern in "${IGNORE_PATTERNS[@]}"
-			do
-				if [[ "$file" == $pattern ]]
-				then
-					ignore="1"
-					break
-				fi
-			done
-
-			if [[ -z "$ignore" ]]
+		ignore=""
+		for pattern in "${IGNORE_PATTERNS[@]}"
+		do
+			if [[ "$file" == $pattern ]]
 			then
-				if [[ -z "$fullpath" ]]
-				then
-					outdated+=("$(basename "$file")")
-				else
-					outdated+=("$file")
-				fi
+				ignore="1"
+				break
+			fi
+		done
+
+		if [[ -z "$ignore" ]]
+		then
+			if [[ -z "$fullpath" ]]
+			then
+				outdated+=("$(basename "$file")")
+			else
+				outdated+=("$file")
 			fi
 		fi
-	done < <(cat "/proc/$pid/maps" 2>/dev/null | sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g' | sort | uniq)
-	# /proc/$pid/maps has 6 columns, delimited by spaces; the sed above removes the first 5, leaving only the filename
+	done < <(
+			# grep filters for files mapped as executable 'x' and ending with 'deleted'
+			# /proc/$pid/maps has 6 columns, delimited by spaces
+			# sed removes the first 5, leaving only the filename
+			cat "/proc/$pid/maps" 2>/dev/null                 \
+			| egrep '^[^ ]+ ..x.*\(deleted\)$'                \
+			| sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g'  \
+			| sort                                            \
+			| uniq
+		)
 
 	if [[ ${#outdated[@]} > 0 ]]
 	then
