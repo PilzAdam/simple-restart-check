@@ -81,6 +81,35 @@ function clearLine {
 	echo -en "\r             \r" >&2
 }
 
+# Helper function to print a nice name for a process
+function printProcessName {
+	local pid="$1"
+
+	local exeName
+	if [[ -f "/proc/$pid/exe" ]]
+	then
+		exeName="$(basename "$(realpath "/proc/$pid/exe")")"
+		exeName="${exeName% (deleted)}" # exe may be deleted, remove the suffix
+	fi
+
+	local commName="$(cat "/proc/$pid/comm")"
+
+	if [[ -z "$exeName" ]]
+	then
+		# we only have a comm name
+		echo -ne "\033[0;35m$commName\033[0m (\033[1m$pid\033[0m)"
+
+	elif [[ "$exeName" == "$commName"* ]]
+	then
+		# comm name is just a truncated version of exe name
+		echo -ne "\033[0;35m$exeName\033[0m (\033[1m$pid\033[0m)"
+
+	else
+		# comm and exe name differ
+		echo -ne "\033[0;35m$commName\033[0m (\033[0;33m$exeName\033[0m, \033[1m$pid\033[0m)"
+	fi
+}
+
 # Main part: check all PIDs in $pid
 for (( i=0; i<${#pids[@]}; i++ ))
 do
@@ -132,19 +161,9 @@ do
 
 	if [[ ${#outdated[@]} > 0 ]]
 	then
-		if [[ -f "/proc/$pid/exe" ]]
-		then
-			name="$(basename "$(realpath "/proc/$pid/exe")")"
-			name="${name% (deleted)}" # exe itself may be deleted
-		elif [[ -f "/proc/$pid/comm" ]]
-		then
-			name="$(cat "/proc/$pid/comm")"
-		else
-			name="[unknown]"
-		fi
-
 		clearLine
-		echo -en "\033[0;35m$name\033[0m (\033[1m$pid\033[0m) uses "
+		printProcessName "$pid"
+		echo -en " uses "
 
 		if [[ ${#outdated[@]} == 1 ]]
 		then
