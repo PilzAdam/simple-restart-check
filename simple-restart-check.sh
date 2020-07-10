@@ -30,22 +30,12 @@ function usage {
 	echo "Usage: $(basename "$0") [-p PID]... [-v] [-f] [-h]" 1>&2
 }
 
-# Some helper functions for logging progress
-function print_progress {
-	echo -n "[$1/$2]" >&2
-}
-function clear_line {
-	echo -en "\r             \r" >&2
-}
-
 function fail {
-	clear_line
 	echo "ERROR: $*" 1>&2
 	exit 2
 }
 
 function warn {
-	clear_line
 	echo "WARNING: $*" 1>&2
 }
 
@@ -141,16 +131,13 @@ function print_process_name {
 # Main part: check all PIDs in $pid
 for (( i=0; i<${#pids[@]}; i++ ))
 do
-	print_progress $((i+1)) ${#pids[@]}
+	echo -en "[$((i+1))/${#pids[@]}]\r" 1>&2
 	pid="${pids[i]}"
 
-	if [[ ! -d "/proc/$pid" ]]
-	then
-		# process already terminated
-		clear_line
-		continue
-	fi
+	# skip this PID if process is already terminated
+	[[ -d "/proc/$pid" ]] || continue
 
+	# warn if maps file doesn't exist
 	[[ -f "/proc/$pid/maps" ]] || warn "/proc/$pid/maps doesn't exist"
 
 	outdated=() # list of all outdated libraries we find
@@ -191,7 +178,6 @@ do
 
 	if [[ ${#outdated[@]} -gt 0 ]]
 	then
-		clear_line
 		print_process_name "$pid"
 		echo -en " uses "
 
@@ -211,6 +197,4 @@ do
 			done
 		fi
 	fi
-
-	clear_line
 done
