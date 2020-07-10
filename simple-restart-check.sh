@@ -54,10 +54,10 @@ do
 			;;
 	esac
 done
-shift $((OPTIND -1))
+shift $((OPTIND-1))
 
 # check that there are no trailing arguments
-if [[ $# > 0 ]]
+if [[ $# -gt 0 ]]
 then
 	usage
 	exit 1
@@ -92,7 +92,8 @@ function printProcessName {
 		exeName="${exeName% (deleted)}" # exe may be deleted, remove the suffix
 	fi
 
-	local commName="$(cat "/proc/$pid/comm")"
+	local commName
+	commName="$(cat "/proc/$pid/comm")"
 
 	if [[ -z "$exeName" ]]
 	then
@@ -132,6 +133,7 @@ do
 		ignore=""
 		for pattern in "${IGNORE_PATTERNS[@]}"
 		do
+			# shellcheck disable=SC2053
 			if [[ "$file" == $pattern ]]
 			then
 				ignore="1"
@@ -152,14 +154,13 @@ do
 			# grep filters for files mapped as executable 'x' and ending with 'deleted'
 			# /proc/$pid/maps has 6 columns, delimited by spaces
 			# sed removes the first 5, leaving only the filename
-			cat "/proc/$pid/maps" 2>/dev/null                 \
-			| egrep '^[^ ]+ ..x.*\(deleted\)$'                \
-			| sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g'  \
-			| sort                                            \
+			grep -E '^[^ ]+ ..x.*\(deleted\)$' "/proc/$pid/maps" 2>/dev/null \
+			| sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g'                 \
+			| sort                                                           \
 			| uniq
 		)
 
-	if [[ ${#outdated[@]} > 0 ]]
+	if [[ ${#outdated[@]} -gt 0 ]]
 	then
 		clearLine
 		printProcessName "$pid"
@@ -169,7 +170,7 @@ do
 		then
 			echo "outdated ${outdated[0]}"
 
-		elif [[ -z $verbose ]]
+		elif [[ -z "$verbose" ]]
 		then
 			echo "multiple outdated libraries"
 
