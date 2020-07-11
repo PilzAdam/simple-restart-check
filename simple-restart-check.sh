@@ -68,7 +68,7 @@ while getopts ":p:vfc:h" opt
 do
 	case "${opt}" in
 		p)
-			[[ "${OPTARG}" =~ [0-9]+ ]] || fail_usage "Invalid PID: ${OPTARG}"
+			[[ "${OPTARG}" =~ ^[0-9]+$ ]] || fail_usage "Invalid PID: ${OPTARG}"
 			pids+=("${OPTARG}")
 			;;
 		v) verbose="1" ;;
