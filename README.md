@@ -4,7 +4,7 @@ A simple Bash script that checks if processes use outdated libraries. This is us
 
 ## How do I use it?
 
-Simply run `simple-restart-check.sh`. By default, it checks all processes that are currently running. Note that it requires root priviliges to check processes not owned by the user who runs the script.
+Simply run `simple-restart-check.sh`. By default, it checks all processes that are currently running. Note that it requires root privileges to check processes not owned by the user who runs the script.
 
 Command-line options:
 | Option                   | Description                                                                                                                       |
@@ -12,12 +12,14 @@ Command-line options:
 | <code>-p&nbsp;PID</code> | Only check the process with the given PID. Can be given multiple times, in which case all explicitly given processes are checked. |
 | `-v`                     | List all outdated libraries for each process, instead of omitting the list if there is more than 1 outdated library.              |
 | `-f`                     | Show full library path instead of just the filename.                                                                              |
-| <code>-c&nbsp;0|1</code> | Whether to use colors in output. If not supplied, colored output is enabled if stdout goes to a terminal.                         |
+| <code>-c&nbsp;0&#124;1</code> | Whether to use colors in output. If not supplied, colored output is enabled if stdout goes to a terminal.                    |
 | `-h`                     | Print a help message and exit.                                                                                                    |
 
 ## How does it work?
 
-The file `/proc/$pid/maps` contains all memory-mapped files of a process, including all libraries. For example, my Bash process looks like this (many lines ommited for brevity):
+### Outdated library detection
+
+The file `/proc/$pid/maps` contains all memory-mapped files of a process, including all libraries. For example, my Bash process looks like this (many lines omitted for brevity):
 ```
 55f6b7e24000-55f6b7eb3000 r-xp 0001f000 08:11 6560573            /usr/bin/bash
 55f6b8b72000-55f6b905b000 rw-p 00000000 00:00 0                  [heap]
@@ -48,4 +50,10 @@ Here, the process uses a version of `libc` that does no longer exist. `simple-re
 ```
 bash (1234) uses outdated libc-2.31.so
 ```
-To filter out the unwanted junk mentioned above, `simple-restart-check.sh` only considers files that are marked as executable (`x` in the second column). Additionally, it has a list of patterns to ignore (see `IGNORE_PATTERNS` close to the top of the script).
+To filter out the unwanted junk mentioned above, `simple-restart-check.sh` only considers files that are marked as executable (`x` in the second column). Additionally, it has a list of patterns to ignore (see `ignore_patterns` close to the top of the script).
+
+### Process name detection
+
+If `simple-restart-check.sh` found a process which uses outdated libraries, it wants to print a readable process name to the user. There are two sources that are considered when turning a PID into a process name:
+* `/proc/$pid/exe` is a symbolic link to the executable of the process. Following the symbolic link and reading the filename results in a nice name for the process. However, for kernel threads, `/proc/$pid/exe` has no target as there is no executable in this case.
+* `/proc/$pid/comm` contains the command name of the process. For most normal processes, this is the same as the filename of the executable (although truncated to 16 characters, thus `/proc/$pid/exe` should be preferred in this case). Some processes override their comm value with a more descriptive name; in this case `simple-restart-check.sh` displays both, the command name and the executable filename. Kernel threads also set a proper name here, so it can be used in place of the executable filename.
