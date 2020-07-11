@@ -82,23 +82,23 @@ do
 			;;
 		h)
 			usage
-			cat <<EOF 1>&2
-Checks which currently running processes use outdated libraries.
+			cat <<-'HELPMSG' 1>&2
+				Checks which currently running processes use outdated libraries.
 
-Options:
-  -p PID   Only check the process with the given PID. Can be given multiple
-           times, in which case all explicitly given processes are checked.
-  -v       List all outdated libraries for each process.
-  -f       Show full library path instead of just the filename.
-  -c 0|1   Whether to use colors in output. If not supplied, colored output is
-           enabled if stdout goes to a terminal.
-  -h       Print this help message and exit.
+				Options:
+				  -p PID   Only check the process with the given PID. Can be given multiple
+				           times, in which case all explicitly given processes are checked.
+				  -v       List all outdated libraries for each process.
+				  -f       Show full library path instead of just the filename.
+				  -c 0|1   Whether to use colors in output. If not supplied, colored output is
+				           enabled if stdout goes to a terminal.
+				  -h       Print this help message and exit.
 
-Exit status:
-  0  success
-  1  invalid command line option
-  2  severe failure during execution
-EOF
+				Exit status:
+				  0  success
+				  1  invalid command line option
+				  2  severe failure during execution
+			HELPMSG
 			exit 0
 			;;
 
