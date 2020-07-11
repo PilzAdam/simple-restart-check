@@ -29,10 +29,9 @@ pids=() # PIDs to check
 verbose="" # whether to print outdated library names if there are more than 1 for a process
 fullpath="" # whether to print the full path of libraries or just the filename
 use_color="" # wether to use colored output
-if [[ -t 1 ]] # if we output to a terminal, use color
-then
-	use_color="1"
-fi
+# if we output to a terminal, use color
+[[ -t 1 ]] && use_color="1"
+
 
 function usage {
 	echo "Usage: $(basename "${0}") [-p PID]... [-v] [-f] [-c 0|1] [-h]" 1>&2
@@ -50,6 +49,12 @@ function cstr {
 	fi
 }
 
+function fail_usage {
+	echo "$(cstr "Error" "${c_error}"): ${*}" 1>&2
+	usage
+	exit 1
+}
+
 function fail {
 	echo "$(cstr "Error" "${c_error}"): ${*}" 1>&2
 	exit 2
@@ -62,17 +67,17 @@ function warn {
 while getopts ":p:vfc:h" opt
 do
 	case "${opt}" in
-		p) pids+=("${OPTARG}") ;;
+		p)
+			[[ "${OPTARG}" =~ [0-9]+ ]] || fail_usage "Invalid PID: ${OPTARG}"
+			pids+=("${OPTARG}")
+			;;
 		v) verbose="1" ;;
 		f) fullpath="1" ;;
 		c)
 			case "${OPTARG}" in
 				0) use_color="" ;;
 				1) use_color="1" ;;
-				*)
-					echo "$(cstr "Error" "${c_error}"): -${opt} expects 0 or 1" 1>&2
-					exit 1
-					;;
+				*) fail_usage "-${opt} expects 0 or 1" ;;
 			esac
 			;;
 		h)
@@ -96,26 +101,16 @@ Exit status:
 EOF
 			exit 0
 			;;
-		:)
-			echo "$(cstr "Error" "${c_error}"): -${OPTARG} requires an argument" 1>&2
-			exit 1
-			;;
-		*)
-			echo "$(cstr "Error" "${c_error}"): Invalid option -${OPTARG}" 1>&2
-			usage
-			exit 1
-			;;
+
+		:) fail_usage "-${OPTARG} requires an argument" ;;
+		*) fail_usage "Invalid option -${OPTARG}" ;;
 	esac
 done
 shift $((OPTIND-1))
 
 # check that there are no trailing arguments
-if [[ ${#} -gt 0 ]]
-then
-	echo "$(cstr "Error" "${c_error}"): Too many arguments" 1>&2
-	usage
-	exit 1
-fi
+[[ ${#} -eq 0 ]] || fail_usage "Too many arguments"
+
 
 # if ${pids} is empty, fill it with all running PIDs
 if [[ ${#pids[@]} -eq 0 ]]
