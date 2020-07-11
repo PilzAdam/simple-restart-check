@@ -206,9 +206,8 @@ do
 			# /proc/${pid}/maps has 6 columns, delimited by spaces
 			# sed removes the first 5, leaving only the filename
 			grep -E '^[^ ]+ ..x.*\(deleted\)$' "/proc/${pid}/maps" 2>/dev/null \
-			| sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g'                 \
-			| sort                                                           \
-			| uniq
+			| sed -E 's|^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ +||g' \
+			| sort --unique
 		)
 
 	if [[ ${#outdated[@]} -gt 0 ]]
