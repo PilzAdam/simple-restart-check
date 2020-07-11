@@ -12,6 +12,7 @@ Command-line options:
 | <code>-p&nbsp;PID</code> | Only check the process with the given PID. Can be given multiple times, in which case all explicitly given processes are checked. |
 | `-v`                     | List all outdated libraries for each process, instead of omitting the list if there is more than 1 outdated library.              |
 | `-f`                     | Show full library path instead of just the filename.                                                                              |
+| <code>-c&nbsp;0|1</code> | Whether to use colors in output. If not supplied, colored output is enabled if stdout goes to a terminal.                         |
 | `-h`                     | Print a help message and exit.                                                                                                    |
 
 ## How does it work?

@@ -13,10 +13,13 @@ readonly ignore_patterns=(
 	"/tmp/.gl*"      # temporary OpenGL (?) files, e.g. /tmp/.glWSsluM
 )
 
-readonly c_process_name="\e[0;35m" # color used for process name output
-readonly c_process_exe="\e[0;33m"  # color used for exe name when it differs from comm
-readonly c_pid="\e[0;1m"           # color used for the PID
-readonly c_reset="\e[0m"           # resets color to normal
+readonly c_name="\e[0;35m"    # color used for process name output
+readonly c_exe="\e[0;33m"     # color used for exe name when it differs from comm
+readonly c_pid="\e[0;1m"      # color used for the PID
+readonly c_library="\e[0;31m" # color used for library names
+readonly c_error="\e[1;31m"   # color used for error messages
+readonly c_warn="\e[1;33m"    # color used for warning messages
+readonly c_reset="\e[0m"      # resets color to normal
 
 set -o nounset
 set -o errexit
@@ -25,26 +28,53 @@ set -o pipefail
 pids=() # PIDs to check
 verbose="" # whether to print outdated library names if there are more than 1 for a process
 fullpath="" # whether to print the full path of libraries or just the filename
+use_color="" # wether to use colored output
+if [[ -t 1 ]] # if we output to a terminal, use color
+then
+	use_color="1"
+fi
 
 function usage {
-	echo "Usage: $(basename "$0") [-p PID]... [-v] [-f] [-h]" 1>&2
+	echo "Usage: $(basename "$0") [-p PID]... [-v] [-f] [-c 0|1] [-h]" 1>&2
+}
+
+# Helper function to print a colored string
+# $1: string to print
+# $2: color string in the format "\e[XXm"
+function cstr {
+	if [[ -z "$use_color" ]]
+	then
+		echo "${1}"
+	else
+		echo -e "${2}${1}${c_reset}"
+	fi
 }
 
 function fail {
-	echo "ERROR: $*" 1>&2
+	echo "$(cstr "Error" "$c_error"): $*" 1>&2
 	exit 2
 }
 
 function warn {
-	echo "WARNING: $*" 1>&2
+	echo "$(cstr "Warning" "$c_warn"): $*" 1>&2
 }
 
-while getopts ":p:vfh" opt
+while getopts ":p:vfc:h" opt
 do
 	case "$opt" in
 		p) pids+=("$OPTARG") ;;
 		v) verbose="1" ;;
 		f) fullpath="1" ;;
+		c)
+			case "$OPTARG" in
+				0) use_color="" ;;
+				1) use_color="1" ;;
+				*)
+					echo "$(cstr "Error" "$c_error"): -$opt expects 0 or 1" 1>&2
+					exit 1
+					;;
+			esac
+			;;
 		h)
 			usage
 			cat <<EOF 1>&2
@@ -55,6 +85,8 @@ Options:
            times, in which case all explicitly given processes are checked.
   -v       List all outdated libraries for each process.
   -f       Show full library path instead of just the filename.
+  -c 0|1   Whether to use colors in output. If not supplied, colored output is
+           enabled if stdout goes to a terminal.
   -h       Print this help message and exit.
 
 Exit status:
@@ -65,11 +97,11 @@ EOF
 			exit 0
 			;;
 		:)
-			echo "Error: -$OPTARG requires an argument" 1>&2
+			echo "$(cstr "Error" "$c_error"): -$OPTARG requires an argument" 1>&2
 			exit 1
 			;;
 		*)
-			echo "Error: Invalid option -$OPTARG"
+			echo "$(cstr "Error" "$c_error"): Invalid option -$OPTARG" 1>&2
 			usage
 			exit 1
 			;;
@@ -80,6 +112,7 @@ shift $((OPTIND-1))
 # check that there are no trailing arguments
 if [[ $# -gt 0 ]]
 then
+	echo "$(cstr "Error" "$c_error"): Too many arguments" 1>&2
 	usage
 	exit 1
 fi
@@ -115,16 +148,16 @@ function print_process_name {
 	if [[ -z "$exe_name" ]]
 	then
 		# we only have a comm name
-		echo -ne "$c_process_name$comm_name$c_reset ($c_pid$pid$c_reset)"
+		echo "$(cstr "$comm_name" "$c_name") ($(cstr "$pid" "$c_pid"))"
 
 	elif [[ "$exe_name" = "$comm_name"* ]]
 	then
 		# comm name is just a truncated version of exe name
-		echo -ne "$c_process_name$exe_name$c_reset ($c_pid$pid$c_reset)"
+		echo "$(cstr "$exe_name" "$c_name") ($(cstr "$pid" "$c_pid"))"
 
 	else
 		# comm and exe name differ
-		echo -ne "$c_process_name$comm_name$c_reset ($c_process_exe$exe_name$c_reset, $c_pid$pid$c_reset)"
+		echo "$(cstr "$comm_name" "$c_name") ($(cstr "$exe_name" "$c_exe"), $(cstr "$pid" "$c_pid"))"
 	fi
 }
 
@@ -178,12 +211,11 @@ do
 
 	if [[ ${#outdated[@]} -gt 0 ]]
 	then
-		print_process_name "$pid"
-		echo -en " uses "
+		echo -n "$(print_process_name "$pid") uses "
 
 		if [[ ${#outdated[@]} -eq 1 ]]
 		then
-			echo "outdated ${outdated[0]}"
+			echo "outdated $(cstr "${outdated[0]}" "$c_library")"
 
 		elif [[ -z "$verbose" ]]
 		then
@@ -193,7 +225,7 @@ do
 			echo "multiple outdated libraries:"
 			for lib in "${outdated[@]}"
 			do
-				echo "    $lib"
+				echo "    $(cstr "$lib" "$c_library")"
 			done
 		fi
 	fi
