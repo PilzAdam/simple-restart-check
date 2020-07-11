@@ -34,7 +34,7 @@ use_color="" # wether to use colored output
 
 
 function usage {
-	echo "Usage: $(basename "${0}") [-p PID]... [-v] [-f] [-c 0|1] [-h]" 1>&2
+	printf "Usage: %s [-p PID]... [-v] [-f] [-c 0|1] [-h]\n" "$(basename "${0}")" 1>&2
 }
 
 # Helper function to print a colored string
@@ -43,25 +43,25 @@ function usage {
 function cstr {
 	if [[ -z "${use_color}" ]]
 	then
-		echo "${1}"
+		printf "%s" "${1}"
 	else
-		echo -e "${2}${1}${c_reset}"
+		printf "${2}%s${c_reset}" "${1}"
 	fi
 }
 
 function fail_usage {
-	echo "$(cstr "Error" "${c_error}"): ${*}" 1>&2
+	printf "$(cstr "Error" "${c_error}"): %s\n" "${*}" 1>&2
 	usage
 	exit 1
 }
 
 function fail {
-	echo "$(cstr "Error" "${c_error}"): ${*}" 1>&2
+	printf "$(cstr "Error" "${c_error}"): %s\n" "${*}" 1>&2
 	exit 2
 }
 
 function warn {
-	echo "$(cstr "Warning" "${c_warn}"): ${*}" 1>&2
+	printf "$(cstr "Warning" "${c_warn}"): %s\n" "${*}" 1>&2
 }
 
 while getopts ":p:vfc:h" opt
@@ -143,23 +143,30 @@ function print_process_name {
 	if [[ -z "${exe_name}" ]]
 	then
 		# we only have a comm name
-		echo "$(cstr "${comm_name}" "${c_name}") ($(cstr "${pid}" "${c_pid}"))"
+		printf "%s (%s)" \
+			"$(cstr "${comm_name}" "${c_name}")" \
+			"$(cstr "${pid}" "${c_pid}")"
 
 	elif [[ "${exe_name}" = "${comm_name}"* ]]
 	then
 		# comm name is just a truncated version of exe name
-		echo "$(cstr "${exe_name}" "${c_name}") ($(cstr "${pid}" "${c_pid}"))"
+		printf "%s (%s)" \
+			"$(cstr "${exe_name}" "${c_name}")" \
+			"$(cstr "${pid}" "${c_pid}")"
 
 	else
 		# comm and exe name differ
-		echo "$(cstr "${comm_name}" "${c_name}") ($(cstr "${exe_name}" "${c_exe}"), $(cstr "${pid}" "${c_pid}"))"
+		printf "%s (%s, %s)" \
+			"$(cstr "${comm_name}" "${c_name}")" \
+			"$(cstr "${exe_name}" "${c_exe}")" \
+			"$(cstr "${pid}" "${c_pid}")"
 	fi
 }
 
 # Main part: check all PIDs in ${pids}
 for (( i=0; i<${#pids[@]}; i++ ))
 do
-	echo -en "[$((i+1))/${#pids[@]}]\r" 1>&2
+	printf "[%d/%d]\r" "$((i+1))" "${#pids[@]}" 1>&2
 	pid="${pids[i]}"
 
 	# skip this PID if process is already terminated
@@ -206,21 +213,21 @@ do
 
 	if [[ ${#outdated[@]} -gt 0 ]]
 	then
-		echo -n "$(print_process_name "${pid}") uses "
+		printf "%s uses " "$(print_process_name "${pid}")"
 
 		if [[ ${#outdated[@]} -eq 1 ]]
 		then
-			echo "outdated $(cstr "${outdated[0]}" "${c_library}")"
+			printf "outdated %s\n" "$(cstr "${outdated[0]}" "${c_library}")"
 
 		elif [[ -z "${verbose}" ]]
 		then
-			echo "multiple outdated libraries"
+			printf "multiple outdated libraries\n"
 
 		else
-			echo "multiple outdated libraries:"
+			printf "multiple outdated libraries:\n"
 			for lib in "${outdated[@]}"
 			do
-				echo "    $(cstr "${lib}" "${c_library}")"
+				printf "    %s\n" "$(cstr "${lib}" "${c_library}")"
 			done
 		fi
 	fi
